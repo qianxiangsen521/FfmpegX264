@@ -20,13 +20,21 @@ add_library( native-lib
 
              SHARED
 
-             src/main/cpp/native-lib.cpp )
+             src/main/cpp/native-lib.cpp
+             src/main/cpp/include/cmdutils.c
+             src/main/cpp/include/ffmpeg.c
+             src/main/cpp/include/ffmpeg_filter.c
+             src/main/cpp/include/ffmpeg_opt.c
+             )
 
 # 查找Android存在的库
 find_library( log-lib
 
               log )
+include_directories(
+    ${CMAKE_SOURCE_DIR}/ffmpeg-3.3.7_1/
 
+)
 # 链接库文件
 target_link_libraries(
                        native-lib
