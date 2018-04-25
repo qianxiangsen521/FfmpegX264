@@ -17,13 +17,22 @@
 package com.google.android.cameraview;
 
 import android.annotation.SuppressLint;
+import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.os.Build;
+import android.os.Environment;
 import android.support.v4.util.SparseArrayCompat;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -31,9 +40,38 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 
 @SuppressWarnings("deprecation")
-class Camera1 extends CameraViewImpl {
+class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
+
+//    public static  boolean NEED_FULL_SCREEN = false;
+//    /**
+//     * 小视频高度
+//     */
+//    public static int SMALL_VIDEO_HEIGHT = 480;
+//    /**
+//     * 小视频宽度
+//     */
+//    public static int SMALL_VIDEO_WIDTH = 360;
+//
+//
+//    public static int mSupportedPreviewWidth = 0;
+//
+//    /**
+//     * 摄像头支持的预览尺寸集合
+//     */
+//    protected List<Camera.Size> mSupportedPreviewSizes;
 
     private static final int INVALID_CAMERA_ID = -1;
+
+    /**
+     * 帧率
+     */
+    protected int mFrameRate = MAX_FRAME_RATE;
+
+
+    /**
+     * 最大帧率
+     */
+    protected static int MAX_FRAME_RATE = 20;
 
     private static final SparseArrayCompat<String> FLASH_MODES = new SparseArrayCompat<>();
 
@@ -92,6 +130,8 @@ class Camera1 extends CameraViewImpl {
             setUpPreview();
         }
         mShowingPreview = true;
+//        qxs
+        setPreviewCallback();
         mCamera.startPreview();
         return true;
     }
@@ -250,6 +290,7 @@ class Camera1 extends CameraViewImpl {
         }
     }
 
+
     @Override
     void setDisplayOrientation(int displayOrientation) {
         if (mDisplayOrientation == displayOrientation) {
@@ -304,9 +345,120 @@ class Camera1 extends CameraViewImpl {
         if (mAspectRatio == null) {
             mAspectRatio = Constants.DEFAULT_ASPECT_RATIO;
         }
+//        mSupportedPreviewSizes = mCameraParameters.getSupportedPreviewSizes();
+        prepareCameraParaments();
         adjustCameraParameters();
         mCamera.setDisplayOrientation(calcDisplayOrientation(mDisplayOrientation));
         mCallback.onCameraOpened();
+    }
+
+    protected void prepareCameraParaments() {
+        if (mCameraParameters == null)
+            return;
+        List<Integer> rates = mCameraParameters.getSupportedPreviewFrameRates();
+        if (rates != null) {
+            if (rates.contains(MAX_FRAME_RATE)) {
+                mFrameRate = MAX_FRAME_RATE;
+            } else {
+                boolean findFrame = false;
+                Collections.sort(rates);
+                for (int i = rates.size() - 1; i >= 0; i--) {
+                    if (rates.get(i) <= MAX_FRAME_RATE) {
+                        mFrameRate = rates.get(i);
+                        findFrame = true;
+                        break;
+                    }
+                }
+                if (!findFrame) {
+                    mFrameRate = rates.get(0);
+                }
+            }
+        }
+
+        mCameraParameters.setPreviewFrameRate(mFrameRate);
+        // mParameters.setPreviewFpsRange(15 * 1000, 20 * 1000);
+//		TODO 设置浏览尺寸
+//        boolean findWidth = false;
+//        for (int i = mSupportedPreviewSizes.size() - 1; i >= 0; i--) {
+//            Camera.Size size = mSupportedPreviewSizes.get(i);
+//            if (size.height == SMALL_VIDEO_HEIGHT) {
+//
+//                mSupportedPreviewWidth = size.width;
+//                checkFullWidth(mSupportedPreviewWidth,SMALL_VIDEO_WIDTH);
+//                findWidth = true;
+//                break;
+//            }
+//        }
+//        if (!findWidth) {
+//            Log.e(getClass().getSimpleName(), "传入高度不支持或未找到对应宽度,请按照要求重新设置，否则会出现一些严重问题");
+//            mSupportedPreviewWidth = 640;
+//            checkFullWidth(640,360);
+//            SMALL_VIDEO_HEIGHT = 480;
+//        }
+//        mCameraParameters.setPreviewSize(mSupportedPreviewWidth, SMALL_VIDEO_HEIGHT);
+
+        // 设置输出视频流尺寸，采样率
+        mCameraParameters.setPreviewFormat(ImageFormat.YV12);
+
+//        //设置自动连续对焦
+//        String mode = getAutoFocusMode();
+//        if (StringUtils.isNotEmpty(mode)) {
+//            mParameters.setFocusMode(mode);
+//        }
+//
+//        //设置人像模式，用来拍摄人物相片，如证件照。数码相机会把光圈调到最大，做出浅景深的效果。而有些相机还会使用能够表现更强肤色效果的色调、对比度或柔化效果进行拍摄，以突出人像主体。
+//        //		if (mCameraId == Camera.CameraInfo.CAMERA_FACING_FRONT && isSupported(mParameters.getSupportedSceneModes(), Camera.Parameters.SCENE_MODE_PORTRAIT))
+//        //			mParameters.setSceneMode(Camera.Parameters.SCENE_MODE_PORTRAIT);
+//
+//        if (isSupported(mParameters.getSupportedWhiteBalance(), "auto"))
+//            mParameters.setWhiteBalance("auto");
+//
+//        //是否支持视频防抖
+//        if ("true".equals(mParameters.get("video-stabilization-supported")))
+//            mParameters.set("video-stabilization", "true");
+//
+//        //		mParameters.set("recording-hint", "false");
+//        //
+//        //		mParameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+//        if (!DeviceUtils.isDevice("GT-N7100", "GT-I9308", "GT-I9300")) {
+//            mParameters.set("cam_mode", 1);
+//            mParameters.set("cam-mode", 1);
+//        }
+    }
+
+//    private void checkFullWidth(int trueValue, int falseValue) {
+//        if(NEED_FULL_SCREEN){
+//            SMALL_VIDEO_WIDTH=trueValue;
+//        }else {
+//            SMALL_VIDEO_WIDTH = falseValue;
+//        }
+//    }
+    /**
+     * qianxiangsen 设置回调
+     */
+    protected void setPreviewCallback() {
+        Camera.Size size = mCameraParameters.getPreviewSize();
+        if (size != null) {
+            int buffSize = size.width * size.height * 3/2;
+            try {
+                mCamera.addCallbackBuffer(new byte[buffSize]);
+                mCamera.addCallbackBuffer(new byte[buffSize]);
+                mCamera.addCallbackBuffer(new byte[buffSize]);
+                mCamera.setPreviewCallbackWithBuffer(this);
+            } catch (OutOfMemoryError e) {
+                Log.e("TAG", "startPreview...setPreviewCallback...", e);
+            }
+        } else {
+            mCamera.setPreviewCallback(this);
+        }
+    }
+
+    @Override
+    public void onPreviewFrame(byte[] data, Camera camera) {
+        Log.d("TAG", "onPreviewFrame: ---->"+data);
+        mCallback.onPictureTaken(data);
+        camera.addCallbackBuffer(data);
+
     }
 
     private AspectRatio chooseAspectRatio() {
@@ -320,25 +472,30 @@ class Camera1 extends CameraViewImpl {
         return r;
     }
 
-    void adjustCameraParameters() {
-        SortedSet<Size> sizes = mPreviewSizes.sizes(mAspectRatio);
-        if (sizes == null) { // Not supported
-            mAspectRatio = chooseAspectRatio();
-            sizes = mPreviewSizes.sizes(mAspectRatio);
-        }
-        Size size = chooseOptimalSize(sizes);
 
-        // Always re-apply camera parameters
-        // Largest picture size in this ratio
-        final Size pictureSize = mPictureSizes.sizes(mAspectRatio).last();
-        if (mShowingPreview) {
-            mCamera.stopPreview();
-        }
-        mCameraParameters.setPreviewSize(size.getWidth(), size.getHeight());
-        mCameraParameters.setPictureSize(pictureSize.getWidth(), pictureSize.getHeight());
-        mCameraParameters.setRotation(calcCameraRotation(mDisplayOrientation));
+    void adjustCameraParameters() {
+       // TODO 设置尺寸
+//        SortedSet<Size> sizes = mPreviewSizes.sizes(mAspectRatio);
+//        if (sizes == null) { // Not supported
+//            mAspectRatio = chooseAspectRatio();
+//            sizes = mPreviewSizes.sizes(mAspectRatio);
+//        }
+//        Size size = chooseOptimalSize(sizes);
+////
+//        // Always re-apply camera parameters
+//        // Largest picture size in this ratio
+//        final Size pictureSize = mPictureSizes.sizes(mAspectRatio).last();
+//        if (mShowingPreview) {
+//            mCamera.stopPreview();
+//        }
+        //qxs
+//        mCameraParameters.setPreviewSize(size.getWidth(), size.getHeight());
+//        mCameraParameters.setPictureSize(pictureSize.getWidth(), pictureSize.getHeight());
+//        mCameraParameters.setRotation(calcCameraRotation(mDisplayOrientation));
+
         setAutoFocusInternal(mAutoFocus);
         setFlashInternal(mFlash);
+
         mCamera.setParameters(mCameraParameters);
         if (mShowingPreview) {
             mCamera.startPreview();

@@ -97,13 +97,13 @@ public class CameraView extends FrameLayout {
         // Internal setup
         final PreviewImpl preview = createPreviewImpl(context);
         mCallbacks = new CallbackBridge();
-        if (Build.VERSION.SDK_INT < 21) {
+//        if (Build.VERSION.SDK_INT < 21) {
             mImpl = new Camera1(mCallbacks, preview);
-        } else if (Build.VERSION.SDK_INT < 23) {
-            mImpl = new Camera2(mCallbacks, preview, context);
-        } else {
-            mImpl = new Camera2Api23(mCallbacks, preview, context);
-        }
+//        } else if (Build.VERSION.SDK_INT < 23) {
+//            mImpl = new Camera2(mCallbacks, preview, context);
+//        } else {
+//            mImpl = new Camera2Api23(mCallbacks, preview, context);
+//        }
         // Attributes
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.CameraView, defStyleAttr,
                 R.style.Widget_CameraView);
@@ -130,11 +130,11 @@ public class CameraView extends FrameLayout {
     @NonNull
     private PreviewImpl createPreviewImpl(Context context) {
         PreviewImpl preview;
-        if (Build.VERSION.SDK_INT < 14) {
+//        if (Build.VERSION.SDK_INT < 14) {
             preview = new SurfaceViewPreview(context, this);
-        } else {
-            preview = new TextureViewPreview(context, this);
-        }
+//        } else {
+//            preview = new TextureViewPreview(context, this);
+//        }
         return preview;
     }
 

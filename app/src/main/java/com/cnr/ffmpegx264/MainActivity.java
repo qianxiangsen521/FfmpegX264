@@ -42,6 +42,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Toast;
 
+import com.cnr.ffmpegx264.jniinterface.FFmpegBridge;
 import com.google.android.cameraview.AspectRatio;
 import com.google.android.cameraview.CameraView;
 
@@ -60,7 +61,7 @@ public class MainActivity extends AppCompatActivity implements
         ActivityCompat.OnRequestPermissionsResultCallback,
         AspectRatioFragment.Listener {
 
-    private static final String TAG = "MainActivity";
+    private static final String TAG = "TAG";
 
     private static final int REQUEST_CAMERA_PERMISSION = 1;
 
@@ -256,7 +257,7 @@ public class MainActivity extends AppCompatActivity implements
                 @Override
                 public void run() {
                     ///mnt/sdcard/Android/data/com.cnr.voicetv/files/Pictures \\私有文件
-
+                    Log.d(TAG, "onPreviewFrame: ---->"+data);
                     File file = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),
                             "picture.jpg");
                     OutputStream os = null;
@@ -275,6 +276,8 @@ public class MainActivity extends AppCompatActivity implements
                             }
                         }
                     }
+//                    FFmpegBridge.encodeFrame2H264(data);
+//                    Log.i("TAG","-->"+FFmpegBridge.stringFromFFmpeg());
                 }
             });
         }
