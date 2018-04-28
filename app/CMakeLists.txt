@@ -25,6 +25,8 @@ add_library( native-lib
              src/main/cpp/include/ffmpeg.c
              src/main/cpp/include/ffmpeg_filter.c
              src/main/cpp/include/ffmpeg_opt.c
+             src/main/cpp/include/ffmpeg_encoder.cpp
+             src/main/cpp/include/cain_recorder.cpp
              )
 
 # 查找Android存在的库

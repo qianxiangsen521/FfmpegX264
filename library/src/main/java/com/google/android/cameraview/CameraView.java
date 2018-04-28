@@ -19,6 +19,7 @@ package com.google.android.cameraview;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.hardware.Camera;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -126,6 +127,7 @@ public class CameraView extends FrameLayout {
             }
         };
     }
+
 
     @NonNull
     private PreviewImpl createPreviewImpl(Context context) {
@@ -404,6 +406,7 @@ public class CameraView extends FrameLayout {
      * {@link Callback#onPictureTaken(CameraView, byte[])}.
      */
     public void takePicture() {
+
         mImpl.takePicture();
     }
 

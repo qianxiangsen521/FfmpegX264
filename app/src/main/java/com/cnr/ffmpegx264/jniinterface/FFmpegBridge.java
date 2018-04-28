@@ -35,7 +35,24 @@ public class FFmpegBridge {
      */
     public final static int ROTATE_270_CROP_LT_MIRROR_LR=3;
 
-
+    /**
+     * 初始化录制器
+     * @param videoPath
+     * @param previewWidth
+     * @param previewHeight
+     * @param videoWidth
+     * @param videoHeight
+     * @param frameRate
+     * @param bitRate
+     * @param enableAudio
+     * @param audioBitRate
+     * @param audioSampleRate
+     * @return
+     */
+    public static native int initMediaRecorder(String videoPath, int previewWidth, int previewHeight,
+                                               int videoWidth, int videoHeight, int frameRate,
+                                               int bitRate, boolean enableAudio,
+                                               int audioBitRate, int audioSampleRate);
     /**
      *
      * @return 返回ffmpeg的编译信息
@@ -43,11 +60,15 @@ public class FFmpegBridge {
     public static native String getFFmpegConfig();
 
     /**
+     * 开始录制
+     */
+    public static native void startRecord();
+    /**
      *  命令形式运行ffmpeg
      * @param cmd
      * @return 返回0表示成功
      */
-    private static native int jxCMDRun(String cmd[]);
+    private static native int jxCMDRun(String... cmd);
 
     /**
      * 编码一帧视频，暂时只能编码yv12视频
@@ -57,7 +78,7 @@ public class FFmpegBridge {
     public static native int encodeFrame2H264(byte[] data);
 
 
-    public static native String  stringFromFFmpeg();
+    public static native int  stringFromFFmpeg(String url);
     /**
      * 编码一帧音频,暂时只能编码pcm音频
      * @param data

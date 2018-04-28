@@ -4,14 +4,14 @@ android {
     compileSdkVersion 26
     defaultConfig {
         applicationId "com.cnr.ffmpegx264"
-        minSdkVersion 17
+        minSdkVersion 21
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                cppFlags "-frtti -fexceptions"
+                cppFlags "-std=c++11"
             }
             ndk {
                 abiFilters "armeabi-v7a"
@@ -45,5 +45,5 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
     compile "com.android.support:design:$supportLibraryVersion"
     compile project(path: ':library')
-
+    compile 'com.googlecode.mp4parser:isoparser:1.1.21'
 }

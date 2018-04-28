@@ -20,6 +20,9 @@ import android.Manifest;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.media.MediaCodec;
+import android.media.MediaFormat;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -39,7 +42,9 @@ import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.Surface;
 import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.cnr.ffmpegx264.jniinterface.FFmpegBridge;
@@ -47,9 +52,6 @@ import com.google.android.cameraview.AspectRatio;
 import com.google.android.cameraview.CameraView;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Set;
 
 
@@ -60,6 +62,8 @@ import java.util.Set;
 public class MainActivity extends AppCompatActivity implements
         ActivityCompat.OnRequestPermissionsResultCallback,
         AspectRatioFragment.Listener {
+    // 视频编码任务
+    private VideoStreamTask mVideoStreamTask;
 
     private static final String TAG = "TAG";
 
@@ -103,11 +107,11 @@ public class MainActivity extends AppCompatActivity implements
             }
         }
     };
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         mCameraView = (CameraView) findViewById(R.id.camera);
         if (mCameraView != null) {
             mCameraView.addCallback(mCallback);
@@ -115,6 +119,39 @@ public class MainActivity extends AppCompatActivity implements
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.take_picture);
         if (fab != null) {
             fab.setOnClickListener(mOnClickListener);
+        }
+        Button start = (Button) findViewById(R.id.start);
+        if (start != null) {
+            start.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                            == PackageManager.PERMISSION_GRANTED) {
+                        mCameraView.start();
+                    } else if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                            Manifest.permission.CAMERA)) {
+                        ConfirmationDialogFragment
+                                .newInstance(R.string.camera_permission_confirmation,
+                                        new String[]{Manifest.permission.CAMERA},
+                                        REQUEST_CAMERA_PERMISSION,
+                                        R.string.camera_permission_not_granted)
+                                .show(getSupportFragmentManager(), FRAGMENT_DIALOG);
+                    } else {
+                        ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.CAMERA},
+                                REQUEST_CAMERA_PERMISSION);
+                    }
+                }
+            });
+        }
+        Button stop = (Button) findViewById(R.id.stop);
+        if (stop != null) {
+            stop.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+
+                    mCameraView.stop();
+                }
+            });
         }
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -127,21 +164,7 @@ public class MainActivity extends AppCompatActivity implements
     @Override
     protected void onResume() {
         super.onResume();
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                == PackageManager.PERMISSION_GRANTED) {
-            mCameraView.start();
-        } else if (ActivityCompat.shouldShowRequestPermissionRationale(this,
-                Manifest.permission.CAMERA)) {
-            ConfirmationDialogFragment
-                    .newInstance(R.string.camera_permission_confirmation,
-                            new String[]{Manifest.permission.CAMERA},
-                            REQUEST_CAMERA_PERMISSION,
-                            R.string.camera_permission_not_granted)
-                    .show(getSupportFragmentManager(), FRAGMENT_DIALOG);
-        } else {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},
-                    REQUEST_CAMERA_PERMISSION);
-        }
+
     }
 
     @Override
@@ -237,10 +260,18 @@ public class MainActivity extends AppCompatActivity implements
 
     private CameraView.Callback mCallback
             = new CameraView.Callback() {
-
         @Override
         public void onCameraOpened(CameraView cameraView) {
-            Log.d(TAG, "onCameraOpened");
+//            String filename = "/DCIM/Camera/" + System.currentTimeMillis() + ".mp4";
+//
+//            String path = Environment.getExternalStorageDirectory().getPath() + filename;
+
+            File file = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+                            "picture.mp4");
+
+            FFmpegBridge.initMediaRecorder(file.getAbsolutePath(), 300, 300, 300, 300,
+                    25, 5760000, true, 40000, 44100);
+            FFmpegBridge.startRecord();
         }
 
         @Override
@@ -249,35 +280,48 @@ public class MainActivity extends AppCompatActivity implements
         }
 
         @Override
-        public void onPictureTaken(CameraView cameraView, final byte[] data) {
-            Log.d(TAG, "onPictureTaken " + data.length);
+        public void onPictureTaken(final CameraView cameraView, final byte[] data) {
+
             Toast.makeText(cameraView.getContext(), R.string.picture_taken, Toast.LENGTH_SHORT)
                     .show();
             getBackgroundHandler().post(new Runnable() {
                 @Override
                 public void run() {
-                    ///mnt/sdcard/Android/data/com.cnr.voicetv/files/Pictures \\私有文件
+//                    ///mnt/sdcard/Android/data/com.cnr.voicetv/files/Pictures \\私有文件
                     Log.d(TAG, "onPreviewFrame: ---->"+data);
-                    File file = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),
-                            "picture.jpg");
-                    OutputStream os = null;
-                    try {
-                        os = new FileOutputStream(file);
-                        os.write(data);
-                        os.close();
-                    } catch (IOException e) {
-                        Log.w(TAG, "Cannot write to " + file, e);
-                    } finally {
-                        if (os != null) {
-                            try {
-                                os.close();
-                            } catch (IOException e) {
-                                // Ignore
-                            }
-                        }
-                    }
+//                    File file = new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+//                            "picture.yvu");
+//                    OutputStream os = null;
+//                    try {
+//                        os = new FileOutputStream(file);
+//                        os.write(data);
+//                        os.close();
+//                    } catch (IOException e) {
+//                        Log.w(TAG, "Cannot write to " + file, e);
+//                    } finally {
+//                        if (os != null) {
+//                            try {
+//                                os.close();
+//                            } catch (IOException e) {
+//                                // Ignore
+//                            }
+//                        }
+//                    }
 //                    FFmpegBridge.encodeFrame2H264(data);
 //                    Log.i("TAG","-->"+FFmpegBridge.stringFromFFmpeg());
+//                    try {
+//                        H264TrackImpl h264Track = new H264TrackImpl(new FileDataSourceImpl(file.getAbsoluteFile()));
+//                        Movie movie = new Movie();
+//                        movie.addTrack(h264Track);
+//                        Container mp4file = new DefaultMp4Builder().build(movie);
+//                        FileChannel fc = new FileOutputStream(new File(getExternalFilesDir(Environment.DIRECTORY_PICTURES),"output.mp4")).getChannel();
+//                        mp4file.writeContainer(fc);
+//                        fc.close();
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+                    mVideoStreamTask = new VideoStreamTask(data);
+                    mVideoStreamTask.execute((Void)null);
                 }
             });
         }
@@ -335,4 +379,22 @@ public class MainActivity extends AppCompatActivity implements
 
     }
 
+    // ------------------------------------- 视频编码线程 -------------------------------------------
+    private class VideoStreamTask extends AsyncTask<Void, Void, Void> {
+
+        private byte[] mData;
+
+        //构造函数
+        VideoStreamTask(byte[] data){
+            this.mData = data;
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            if (mData != null) {
+                FFmpegBridge.encodeFrame2H264(mData);
+            }
+            return null;
+        }
+    }
 }
