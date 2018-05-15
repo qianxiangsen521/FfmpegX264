@@ -14,6 +14,10 @@ public class FFmpegBridge {
         System.loadLibrary("native-lib");
         System.loadLibrary("ffmpeg");
     }
+    /**
+     * 发送停止命令
+     */
+    public static native void stopRecord();
 
     /**
      * 结束录制并且转码保存完成
@@ -63,6 +67,8 @@ public class FFmpegBridge {
      * 开始录制
      */
     public static native void startRecord();
+
+    public static native void openRecord();
     /**
      *  命令形式运行ffmpeg
      * @param cmd
@@ -91,6 +97,14 @@ public class FFmpegBridge {
      * @return
      */
     public static native int recordEnd();
+
+    /**
+     * 发送需要编码的PCM数据
+     * @param data
+     * @return
+     */
+    public static native int encodePCMFrame(byte[] data, int len);
+
 
     /**
      * 初始化

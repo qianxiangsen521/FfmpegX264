@@ -79,6 +79,7 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
             public void onSurfaceChanged() {
                 if (mCamera != null) {
                     setUpPreview();
+
                     adjustCameraParameters();
                 }
             }
@@ -117,10 +118,10 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
     boolean start() {
         chooseCamera();
         openCamera();
+        setPreviewCallback();
         if (mPreview.isReady()) {
             setUpPreview();
         }
-        setPreviewCallback();
         mShowingPreview = true;
         mCamera.startPreview();
         return true;
@@ -357,7 +358,8 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
             sizes = mPreviewSizes.sizes(mAspectRatio);
         }
         Size size = chooseOptimalSize(sizes);
-
+        int fps = chooseFixedPreviewFps(mCameraParameters, 30 * 1000);
+        mCameraParameters.setRecordingHint(true);
         // Always re-apply camera parameters
         // Largest picture size in this ratio
         final Size pictureSize = mPictureSizes.sizes(mAspectRatio).last();
@@ -367,6 +369,8 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
         mCameraParameters.setPreviewSize(size.getWidth(), size.getHeight());
         mCameraParameters.setPictureSize(pictureSize.getWidth(), pictureSize.getHeight());
         mCameraParameters.setRotation(calcCameraRotation(mDisplayOrientation));
+
+
         setAutoFocusInternal(mAutoFocus);
         setFlashInternal(mFlash);
         mCamera.setParameters(mCameraParameters);
@@ -374,7 +378,30 @@ class Camera1 extends CameraViewImpl implements Camera.PreviewCallback {
             mCamera.startPreview();
         }
     }
-
+    /**
+     * 选择合适的预览fps
+     * @param parameters
+     * @param expectedThoudandFps
+     * @return
+     */
+    private int chooseFixedPreviewFps(Camera.Parameters parameters, int expectedThoudandFps) {
+        List<int[]> supportedFps = parameters.getSupportedPreviewFpsRange();
+        for (int[] entry : supportedFps) {
+            if (entry[0] == entry[1] && entry[0] == expectedThoudandFps) {
+                parameters.setPreviewFpsRange(entry[0], entry[1]);
+                return entry[0];
+            }
+        }
+        int[] temp = new int[2];
+        int guess;
+        parameters.getPreviewFpsRange(temp);
+        if (temp[0] == temp[1]) {
+            guess = temp[0];
+        } else {
+            guess = temp[1] / 2;
+        }
+        return guess;
+    }
     @SuppressWarnings("SuspiciousNameCombination")
     private Size chooseOptimalSize(SortedSet<Size> sizes) {
         if (!mPreview.isReady()) { // Not yet laid out

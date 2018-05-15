@@ -7,6 +7,8 @@
 #include "cain_recorder.h"
 using namespace std;
 
+AVFormatContext *inputContext = nullptr;
+
 
 CainRecorder *recorder;
 extern "C"
@@ -85,4 +87,58 @@ Java_com_cnr_ffmpegx264_jniinterface_FFmpegBridge_startRecord(JNIEnv *env, jclas
     }
     recorder->startRecord();
 
+
+
+}
+
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_cnr_ffmpegx264_jniinterface_FFmpegBridge_openRecord(JNIEnv *env, jclass type) {
+
+    // TODO
+    av_register_all();
+
+}
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_cnr_ffmpegx264_jniinterface_FFmpegBridge_prepareJXFFmpegEncoder(JNIEnv *env, jclass type,
+                                                                         jstring mediaBasePath_,
+                                                                         jstring mediaName_,
+                                                                         jint filter, jint in_width,
+                                                                         jint in_height,
+                                                                         jint out_width,
+                                                                         jint out_height,
+                                                                         jint frameRate,
+                                                                         jlong bit_rate) {
+    const char *mediaBasePath = env->GetStringUTFChars(mediaBasePath_, 0);
+    const char *mediaName = env->GetStringUTFChars(mediaName_, 0);
+
+    // TODO
+
+    env->ReleaseStringUTFChars(mediaBasePath_, mediaBasePath);
+    env->ReleaseStringUTFChars(mediaName_, mediaName);
+}extern "C"
+JNIEXPORT void JNICALL
+Java_com_cnr_ffmpegx264_jniinterface_FFmpegBridge_stopRecord(JNIEnv *env, jclass type) {
+
+    if (!recorder) {
+        return;
+    }
+    recorder->recordEndian();
+
+}extern "C"
+JNIEXPORT jint JNICALL
+Java_com_cnr_ffmpegx264_jniinterface_FFmpegBridge_encodePCMFrame(JNIEnv *env, jclass type,
+                                                                 jbyteArray data_, jint len)
+{
+    if (!recorder) {
+        return 0;
+    }
+    jbyte *data = env->GetByteArrayElements(data_, NULL);
+
+    // 音频编码
+    recorder->aacEncode(data);
+
+    env->ReleaseByteArrayElements(data_, data, 0);
 }
